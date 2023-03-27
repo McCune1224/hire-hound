@@ -1,10 +1,15 @@
+.env
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+
+#Air (local hot reload)
 *.air.toml
+tmp/
 
 # Test binary, built with `go test -c`
 *.test
