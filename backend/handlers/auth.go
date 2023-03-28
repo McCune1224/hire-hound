@@ -4,17 +4,82 @@ import (
 	"hirehound/models"
 	"hirehound/repository"
 	"regexp"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	// SESSION_LENGTH is the length of a session in hours
+	// Multiply with time.Hour to get time.Duration
+	SESSION_LENGTH = 24 * 14
+)
+
 func Login(c *fiber.Ctx) error {
-	return c.JSON(
-		fiber.Map{
-			"message": "TODO: Login",
-		},
-	)
+	// Parse body info
+	reqUser := &models.User{}
+	userCreateErr := c.BodyParser(reqUser)
+	if userCreateErr != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Invalid request body",
+			"error":   userCreateErr.Error(),
+		})
+	}
+	if reqUser.Email == "" && reqUser.Username == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Email or username required",
+		})
+	}
+	if reqUser.Password == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Password required",
+		})
+	}
+
+	// Check if user exists in database prioritize email over username
+	dbUser := &models.User{}
+
+	if reqUser.Email != "" {
+		repository.DB.Where("email = ?", reqUser.Email).First(dbUser)
+		if dbUser.ID == 0 {
+			return c.Status(401).JSON(fiber.Map{
+				"message": "Invalid email",
+			})
+		}
+	}
+	if reqUser.Email == "" && reqUser.Username != "" {
+		repository.DB.Where("username = ?", reqUser.Username).First(dbUser)
+		if dbUser.ID == 0 {
+			return c.Status(401).JSON(fiber.Map{
+				"message": "Invalid username",
+			})
+		}
+	}
+
+	if bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(reqUser.Password)) != nil {
+		return c.Status(401).JSON(fiber.Map{
+			"message": "Invalid password",
+		})
+	}
+
+	// Check if session already exists for associated user
+	existingSession := &models.Session{}
+	repository.DB.Where("user_id = ?", dbUser.ID).First(existingSession)
+	if existingSession.ID != "" {
+		repository.DB.Delete(existingSession)
+	}
+	// Create new session for user
+	newSession := &models.Session{}
+	newSession.Expires = time.Now().Add(time.Hour * SESSION_LENGTH)
+	repository.DB.Create(newSession)
+
+	// Return session token to user in JSON
+	return c.JSON(fiber.Map{
+		"message":    "Successfully logged in",
+		"session_id": newSession.ID,
+		"expires":    newSession.Expires,
+	})
 }
 
 func Logout(c *fiber.Ctx) error {

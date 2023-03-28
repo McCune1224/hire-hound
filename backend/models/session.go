@@ -9,12 +9,12 @@ import (
 type Session struct {
 	ID string `json:"id"`
 	// Foregin key to user
-	UserID  string `gorm:"type:uuid;not null" json:"user_id"`
-	Expires int64  `json:"expires"`
+	UserID  string    `gorm:"type:uuid;not null" json:"user_id"`
+	Expires time.Time `json:"expires"`
 }
 
 func (s *Session) IsExpired() bool {
-	return s.Expires < time.Now().Unix()
+	return s.Expires.Before(time.Now())
 }
 
 func (s *Session) BeforeCreate() error {
