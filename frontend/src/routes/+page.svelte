@@ -10,6 +10,7 @@
 </svelte:head>
 
 <section>
+    <h1 class=" bg-orange-300 text3xl font-bold underline">Test</h1>
 	<h1>
 		<span class="welcome">
 			<picture>
