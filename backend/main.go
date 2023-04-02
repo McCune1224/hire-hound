@@ -2,6 +2,7 @@ package main
 
 import (
 	"hirehound/repository"
+	"hirehound/routes"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
@@ -32,6 +33,12 @@ func main() {
 			"message": "Hello, Railway!",
 		})
 	})
+
+
+    routes.ApplicationRoutes(app)
+    routes.AuthRoutes(app)
+
+
 
 	app.Listen(getPort())
 }

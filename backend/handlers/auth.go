@@ -3,10 +3,12 @@ package handlers
 import (
 	"hirehound/models"
 	"hirehound/repository"
+	"os"
 	"regexp"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,13 +24,12 @@ func Login(c *fiber.Ctx) error {
 	userCreateErr := c.BodyParser(reqUser)
 	if userCreateErr != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"message": "Invalid request body",
 			"error":   userCreateErr.Error(),
 		})
 	}
 	if reqUser.Email == "" && reqUser.Username == "" {
 		return c.Status(400).JSON(fiber.Map{
-			"message": "Email or username required",
+			"error": "Email or username required",
 		})
 	}
 	if reqUser.Password == "" {
@@ -63,30 +64,39 @@ func Login(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check if session already exists for associated user
-	existingSession := &models.Session{}
-	repository.DB.Where("user_id = ?", dbUser.ID).First(existingSession)
-	if existingSession.ID != "" {
-		repository.DB.Delete(existingSession)
-	}
-	// Create new session for user
-	newSession := &models.Session{}
-	newSession.Expires = time.Now().Add(time.Hour * SESSION_LENGTH)
-	repository.DB.Create(newSession)
+	token := jwt.New(jwt.SigningMethodHS256)
 
-	// Return session token to user in JSON
+	claims := token.Claims.(jwt.MapClaims)
+	claims["id"] = dbUser.ID
+	claims["username"] = dbUser.Username
+	claims["exp"] = time.Now().Add(time.Hour * SESSION_LENGTH).Unix()
+
+	signedToken, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "Error signing token",
+			"error":   err.Error(),
+		})
+	}
+
 	return c.JSON(fiber.Map{
-		"message":    "Successfully logged in",
-		"session_id": newSession.ID,
-		"expires":    newSession.Expires,
+		"message": "Successfully logged in",
+		"token":   signedToken,
 	})
 }
 
 func Logout(c *fiber.Ctx) error {
-	return c.JSON(
-		fiber.Map{
-			"message": "TODO: Logout",
-		},
+	// Get session id from header
+
+	// validate session exists in db
+
+	// validate session hasn't expired
+
+	// delete session from db
+
+	return c.JSON(fiber.Map{
+		"message": "Successfully logged out",
+	},
 	)
 }
 
@@ -95,7 +105,6 @@ func Register(c *fiber.Ctx) error {
 	userCreateErr := c.BodyParser(requestUser)
 	if userCreateErr != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"message": "Invalid request body",
 			"error":   userCreateErr.Error(),
 		})
 	}
@@ -104,14 +113,14 @@ func Register(c *fiber.Ctx) error {
 	repository.DB.Where("email = ?", requestUser.Email).First(dbUser)
 	if dbUser.ID != 0 {
 		return c.Status(400).JSON(fiber.Map{
-			"message": "User already exists with that email",
+			"error": "User already exists with that email",
 		})
 	}
 
 	// validate password length
 	if len(requestUser.Password) < 8 || len(requestUser.Password) > 20 {
 		return c.Status(400).JSON(fiber.Map{
-			"message": "Password must be between 8 and 20 characters",
+			"error": "Password must be between 8 and 20 characters",
 		})
 	}
 
@@ -119,7 +128,7 @@ func Register(c *fiber.Ctx) error {
 	pattern := regexp.MustCompile(`[0-9]`)
 	if !pattern.MatchString(requestUser.Password) {
 		return c.Status(400).JSON(fiber.Map{
-			"message": "Password must contain at least one number",
+			"error": "Password must contain at least one number",
 		})
 	}
 
@@ -127,7 +136,7 @@ func Register(c *fiber.Ctx) error {
 	pattern = regexp.MustCompile(`[!@#$%^&*]`)
 	if !pattern.MatchString(requestUser.Password) {
 		return c.Status(400).JSON(fiber.Map{
-			"message": "Password must contain at least one special character",
+			"error": "Password must contain at least one special character",
 		})
 	}
 
@@ -150,6 +159,5 @@ func Register(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"message": "User created successfully",
-		"user":    requestUser,
 	})
 }

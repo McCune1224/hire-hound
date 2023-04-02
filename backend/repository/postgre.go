@@ -21,8 +21,13 @@ func Connect() {
 
 	db.Logger.LogMode(logger.Info)
 
+	// // Delete tables if exist
+	// db.Migrator().DropTable(models.Application{})
+	// db.Migrator().DropTable(models.Company{})
+
 	// Automigrations
 	db.AutoMigrate(models.User{})
+	db.AutoMigrate(models.Application{})
 
 	DB = db
 }

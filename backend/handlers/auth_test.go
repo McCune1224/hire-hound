@@ -13,8 +13,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Variable for app testing
-
 func appSetup() *fiber.App {
 	testApp := fiber.New()
 
@@ -113,8 +111,6 @@ func TestRegister(t *testing.T) {
 	}
 }
 
-// Test for user Login, should expect to get back a 'session_id' and a 200 status if valid
-// 400 status if invalid form info or 401 if invalid credentials
 func TestLogin(t *testing.T) {
 	test_app := appSetup()
 	test_app.Post("/login", Login)
@@ -124,8 +120,8 @@ func TestLogin(t *testing.T) {
 	}
 
 	// create user just in case they don't already exist in DB:
-	plainPassword := "TestPassword21!"
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(plainPassword), bcrypt.DefaultCost)
+	validPlainPassword := "TestPassword21!"
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(validPlainPassword), bcrypt.DefaultCost)
 	testUser := models.User{
 		Username: "testLoginUser",
 		Password: string(hashedPassword),
@@ -143,7 +139,7 @@ func TestLogin(t *testing.T) {
 			ExpectedStatusCode: 200,
 			RequestBody: reqBody{
 				Username: "testLoginUser",
-				Password: plainPassword,
+				Password: validPlainPassword,
 			},
 		},
 		{
@@ -191,12 +187,9 @@ func TestLogin(t *testing.T) {
 				t.Errorf("Expected status code %d, got %d\nMessage:%v", tc.ExpectedStatusCode, httpResp.StatusCode, jsonBodyResponse)
 			}
 
-			if httpResp.StatusCode == 200 && jsonBodyResponse["session_id"] == nil {
-				t.Errorf("Expected session_id in response, got nil")
+			if httpResp.StatusCode == 200 && jsonBodyResponse["token"] == nil {
+				t.Errorf("Expected jwt token in response, got nil")
 			}
 		})
 	}
-}
-
-func TestLogout(t *testing.T) {
 }

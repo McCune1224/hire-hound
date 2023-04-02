@@ -4,9 +4,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Session struct {
+	gorm.Model
 	ID string `json:"id"`
 	// Foregin key to user
 	UserID  string    `gorm:"type:uuid;not null" json:"user_id"`
