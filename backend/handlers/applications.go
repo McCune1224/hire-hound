@@ -4,10 +4,19 @@ import (
 	"errors"
 	"hirehound/models"
 	"hirehound/repository"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 )
+
+// helper struct for what to expect in JSON response for applications
+type applicationResponse struct {
+	ID          uint      `json:"id"`
+	JobTitle    string    `json:"jobTitle"`
+	Status      string    `json:"status"`
+	DateApplied time.Time `json:"dateApplied"`
+}
 
 func getUserFromContext(c *fiber.Ctx) (*models.UserContextJWT, error) {
 	userCtxJWT := c.Locals("user").(*jwt.Token)
@@ -34,14 +43,7 @@ func GetAllApplications(c *fiber.Ctx) error {
 			"error":   err.Error(),
 		})
 	}
-	// making this non-gorm model to drop uneccessary fields
-	type responseApplication []struct {
-		ID          uint   `json:"id"`
-		JobTitle    string `json:"jobTitle"`
-		Status      string `json:"status"`
-		DateApplied string `json:"dateApplied"`
-	}
-	var resApplication responseApplication
+	var resApplication applicationResponse
 	dbErr := repository.DB.Model(&models.Application{}).Where("user_id = ?", userClaims.ID).Find(&resApplication).Error
 	if dbErr != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -56,7 +58,7 @@ func GetAllApplications(c *fiber.Ctx) error {
 	})
 }
 
-func GetApplicationByID(c *fiber.Ctx) error {
+func GetApplication(c *fiber.Ctx) error {
 	applicationID := c.Params("id")
 	user, err := getUserFromContext(c)
 	if err != nil {
@@ -108,7 +110,7 @@ func CreateApplication(c *fiber.Ctx) error {
 	err := c.BodyParser(&reqApplication)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"error":   err.Error(),
+			"error": err.Error(),
 		})
 	}
 
@@ -138,14 +140,62 @@ func CreateApplication(c *fiber.Ctx) error {
 	}
 	// return the new application ID in the response
 	return c.JSON(fiber.Map{
-		"message":          "TODO: GetApplications",
-		"newApplicationID": newApplication.ID,
+		"message":       "TODO: GetApplications",
+		"applicationID": newApplication.ID,
 	})
 }
 
 func UpdateApplication(c *fiber.Ctx) error {
+	paramApplicationID := c.Params("id")
+	// parse req body
+	reqBody := models.Application{}
+	err := c.BodyParser(&reqBody)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Error parsing request body",
+			"error":   err.Error(),
+		})
+	}
+
+	// get user from context
+	user, err := getUserFromContext(c)
+
+	// make sure user owns application and application exists
+	dbApplication := models.Application{}
+	dbErr := repository.DB.First(&dbApplication, paramApplicationID).Error
+	if dbErr != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "Error getting application from database",
+			"error":   dbErr.Error(),
+		})
+	}
+	if dbApplication.UserID != user.ID {
+		return c.Status(401).JSON(fiber.Map{
+			"message": "User does not own application",
+		})
+	}
+
+	// update application
+	dbApplication.JobTitle = reqBody.JobTitle
+	dbApplication.Status = reqBody.Status
+	dbApplication.DateApplied = reqBody.DateApplied
+
+	dbErr = repository.DB.Save(&dbApplication).Error
+	if dbErr != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "Error updating application",
+			"error":   dbErr.Error(),
+		})
+	}
+
 	return c.JSON(fiber.Map{
-		"message": "TODO: GetApplications",
+		"message": "Successfully updated application",
+		"newApplication": applicationResponse{
+			ID:          dbApplication.ID,
+			JobTitle:    dbApplication.JobTitle,
+			Status:      dbApplication.Status,
+			DateApplied: dbApplication.DateApplied,
+		},
 	})
 }
 
@@ -155,7 +205,7 @@ func DeleteApplication(c *fiber.Ctx) error {
 	err := c.BodyParser(&reqBody)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"error":   err.Error(),
+			"error": err.Error(),
 		})
 	}
 

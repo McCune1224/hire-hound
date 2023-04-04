@@ -23,7 +23,7 @@ func ApplicationRoutes(app *fiber.App) {
 	// Get all applications
 	applications.Get("/", handlers.GetAllApplications)
 	// Get application by id
-	applications.Get("/:id", handlers.GetApplicationByID)
+	applications.Get("/:id", handlers.GetApplication)
 
 	// Create application
 	applications.Post("/", handlers.CreateApplication)
