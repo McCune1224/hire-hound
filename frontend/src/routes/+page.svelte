@@ -1,20 +1,13 @@
-<script>
-</script>
+<!-- YOU CAN DELETE EVERYTHING IN THIS PAGE -->
 
-<section>
-	<h1 class=" bg-orange-300 text3xl font-bold underline">Hirehound</h1>
-
-	<p class="text-xl">Welcome to Hirehound</p>
-
-	<p class="text-xl">
-		Hirehound is a job tracking app that helps you keep track of your job applications.
-	</p>
-	<p>Some of the features include:</p>
-	<ul>
-		<li>Track your job applications</li>
-		<li>Keep track of your interviews</li>
-		<li>Keep track of your job offers</li>
-		<li>Keep track of your salary</li>
-		<li>View analytics of your job applications</li>
-	</ul>
-</section>
+<div class="container h-full mx-auto flex justify-center items-center">
+	<div class="space-y-5">
+		<h1 class="h1">Let's get cracking bones!</h1>
+		<p>Start by exploring:</p>
+		<ul>
+			<li><code class="code">/src/routes/+layout.svelte</code> - barebones layout, the CSS import order is critical!</li>
+			<li><code class="code">/src/app.postcss</code> - minimal css to make the page full screen, may not be relevant for your project</li>
+			<li><code class="code">/src/routes/+page.svelte</code> - this page, you can replace the contents</li>
+		</ul>
+	</div>
+</div>
